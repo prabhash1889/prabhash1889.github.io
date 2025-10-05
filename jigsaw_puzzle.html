@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Jigsaw Puzzle Maker</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+	<style>
+		/* --- Global Styles & Resets --- */
+		:root {
+			--bg-color: #e0e5ec;
+			--primary-color: #6d5dfc;
+			--primary-light: #8abdff;
+			--text-color: #5f677A;
+			--light-grey: #c8d0e7;
+			--white: #fff;
+			--success-color: #24d198;
+			--shadow-light: #ffffff;
+			--shadow-dark: #a3b1c6;
+		}
+
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Poppins', sans-serif;
+			background: var(--bg-color);
+			color: var(--text-color);
+			display: flex;
+			justify-content: center;
+			align-items: flex-start;
+			min-height: 100vh;
+			padding: 2rem;
+			-webkit-font-smoothing: antialiased;
+			-moz-osx-font-smoothing: grayscale;
+		}
+
+		/* --- Main Container & Header --- */
+		.container {
+			width: 95%;
+			max-width: 1200px;
+			background: rgba(230, 235, 245, 0.6);
+			/* Semi-transparent */
+			backdrop-filter: blur(10px);
+			-webkit-backdrop-filter: blur(10px);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			padding: 2.5rem 3rem;
+			border-radius: 30px;
+			box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+			text-align: center;
+		}
+
+		header h1 {
+			font-size: 2.8rem;
+			font-weight: 700;
+			color: var(--primary-color);
+			margin-bottom: 0.5rem;
+		}
+
+		header p {
+			font-size: 1.1rem;
+			color: var(--text-color);
+			margin-bottom: 2.5rem;
+		}
+
+		/* --- Controls Section --- */
+		.controls {
+			display: flex;
+			justify-content: center;
+			align-items: flex-start;
+			gap: 2rem;
+			margin-bottom: 2.5rem;
+			flex-wrap: wrap;
+		}
+
+		.control-group {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			text-align: left;
+		}
+
+		.control-group label {
+			font-weight: 600;
+			margin-bottom: 0.75rem;
+			color: var(--text-color);
+			font-size: 1rem;
+			padding-left: 10px;
+		}
+
+		/* Neumorphic Inputs, Selects, and Buttons */
+		.file-upload-label,
+		select,
+		button {
+			font-family: 'Poppins', sans-serif;
+			font-size: 1rem;
+			border: none;
+			outline: none;
+			border-radius: 20px;
+			padding: 1rem 1.5rem;
+			background: var(--bg-color);
+			box-shadow: inset 5px 5px 10px var(--shadow-dark), inset -5px -5px 10px var(--shadow-light);
+			transition: all 0.2s ease-in-out;
+			color: var(--text-color);
+			min-width: 220px;
+		}
+
+		input[type="file"] {
+			display: none;
+		}
+
+		.file-upload-label {
+			cursor: pointer;
+			text-align: center;
+		}
+
+		.file-upload-label:hover,
+		select:hover {
+			box-shadow: inset 3px 3px 7px var(--shadow-dark), inset -3px -3px 7px var(--shadow-light);
+		}
+
+		#fileName {
+			margin-top: 8px;
+			font-size: 0.85rem;
+			color: var(--text-color);
+			font-style: italic;
+			min-height: 1.2em;
+			padding-left: 10px;
+		}
+
+		select {
+			appearance: none;
+			background: var(--bg-color) url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%235f677A' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") no-repeat right 1rem center/16px 12px;
+		}
+
+		button {
+			font-weight: 600;
+			color: var(--white);
+			background: var(--primary-color);
+			box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+			cursor: pointer;
+		}
+
+		button:hover:not(:disabled) {
+			background: linear-gradient(145deg, #5a4ddc, #7b6aff);
+		}
+
+		button:active:not(:disabled) {
+			box-shadow: inset 5px 5px 10px #5244b7, inset -5px -5px 10px #8878ff;
+		}
+
+		button:disabled {
+			background: var(--light-grey);
+			color: var(--text-color);
+			cursor: not-allowed;
+			opacity: 0.7;
+			box-shadow: none;
+		}
+
+		/* --- Game Area --- */
+		.game-area {
+			display: flex;
+			justify-content: center;
+			align-items: flex-start;
+			margin-top: 2rem;
+		}
+
+		#puzzle-container {
+			display: grid;
+			border-radius: 20px;
+			box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+			padding: 10px;
+			background: var(--bg-color);
+		}
+
+		.puzzle-piece {
+			cursor: grab;
+			transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+			border-radius: 8px;
+			box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);
+		}
+
+		.puzzle-piece:hover {
+			filter: brightness(1.1);
+		}
+
+		.puzzle-piece:active {
+			cursor: grabbing;
+		}
+
+		.puzzle-piece.dragging {
+			opacity: 0.8;
+			transform: scale(1.05);
+			box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+			z-index: 100;
+		}
+
+		/* --- Message Area --- */
+		@keyframes fadeIn {
+			from {
+				opacity: 0;
+				transform: translateY(20px);
+			}
+
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+
+		@keyframes celebratoryGlow {
+			0% {
+				box-shadow: 0 0 10px var(--success-color), 0 0 20px var(--success-color);
+			}
+
+			50% {
+				box-shadow: 0 0 30px #a1ffdd, 0 0 40px var(--success-color);
+			}
+
+			100% {
+				box-shadow: 0 0 10px var(--success-color), 0 0 20px var(--success-color);
+			}
+		}
+
+		#message {
+			margin-top: 2rem;
+			font-size: 1.6rem;
+			font-weight: 600;
+			color: var(--success-color);
+			min-height: 2.5rem;
+			animation: fadeIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+		}
+
+		.solved {
+			animation: celebratoryGlow 2s ease-in-out infinite;
+		}
+
+		/* --- Responsive Design --- */
+		@media (max-width: 768px) {
+			body {
+				padding: 1rem;
+			}
+
+			.container {
+				padding: 1.5rem;
+			}
+
+			header h1 {
+				font-size: 2.2rem;
+			}
+
+			.controls {
+				flex-direction: column;
+				align-items: center;
+				gap: 1.5rem;
+			}
+
+			button,
+			select,
+			.file-upload-label {
+				width: 100%;
+				max-width: 350px;
+				text-align: center;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<header>
+			<h1>Jigsaw Puzzle Maker 🧩</h1>
+			<p>Upload an image, choose a difficulty, and solve the puzzle!</p>
+		</header>
+
+		<main>
+			<div class="controls">
+				<div class="control-group">
+					<label for="imageUploader">1. Choose an Image</label>
+					<input type="file" id="imageUploader" accept="image/*">
+					<label for="imageUploader" class="file-upload-label">Click to Upload...</label>
+					<span id="fileName"></span>
+				</div>
+				<div class="control-group">
+					<label for="difficulty">2. Select Difficulty</label>
+					<select id="difficulty">
+						<option value="5">Easy (5 Pieces)</option>
+						<option value="20" selected>Medium (20 Pieces)</option>
+						<option value="40">Hard (40 Pieces)</option>
+						<option value="80">Very Hard (80 Pieces)</option>
+						<option value="100">Expert (100 Pieces)</option>
+					</select>
+				</div>
+				<div class="control-group">
+					<label>3. Start Game</label>
+					<button id="startButton" disabled>Start Game</button>
+				</div>
+			</div>
+
+			<div class="game-area">
+				<div id="puzzle-container"></div>
+			</div>
+
+			<h2 id="message"></h2>
+		</main>
+	</div>
+
+	<script>
+		document.addEventListener('DOMContentLoaded', () => {
+			// --- STATE VARIABLES ---
+			let imageSrc = null;
+			let difficulty = {};
+			let imageElement = new Image();
+			let draggedPiece = null;
+
+			// --- DOM ELEMENTS ---
+			const imageUploader = document.getElementById('imageUploader');
+			const difficultySelector = document.getElementById('difficulty');
+			const startButton = document.getElementById('startButton');
+			const puzzleContainer = document.getElementById('puzzle-container');
+			const message = document.getElementById('message');
+			const fileUploadLabel = document.querySelector('.file-upload-label');
+			const fileNameSpan = document.getElementById('fileName');
+
+
+			// --- EVENT LISTENERS ---
+			imageUploader.addEventListener('change', handleImageUpload);
+			startButton.addEventListener('click', startGame);
+			window.addEventListener('resize', handleResize);
+
+			// --- FUNCTIONS ---
+
+			function handleImageUpload(e) {
+				const file = e.target.files[0];
+				if (!file) return;
+
+				// Update the custom file input label
+				fileUploadLabel.textContent = 'Image Selected!';
+				fileNameSpan.textContent = file.name;
+
+				const reader = new FileReader();
+				reader.onload = (event) => {
+					imageSrc = event.target.result;
+					imageElement.src = imageSrc;
+					startButton.disabled = false;
+				};
+				reader.readAsDataURL(file);
+			}
+
+			function setDifficulty(level) {
+				switch (parseInt(level)) {
+					case 5: return { rows: 5, cols: 1 };
+					case 20: return { rows: 5, cols: 4 };
+					case 40: return { rows: 8, cols: 5 };
+					case 80: return { rows: 10, cols: 8 };
+					case 100: return { rows: 10, cols: 10 };
+					default: return { rows: 5, cols: 4 };
+				}
+			}
+
+			function startGame() {
+				if (!imageSrc) {
+					alert('Please upload an image first!');
+					return;
+				}
+				difficulty = setDifficulty(difficultySelector.value);
+				clearGameBoard();
+
+				imageElement.onload = () => setupPuzzle();
+				// If image is already cached/loaded, trigger onload manually
+				if (imageElement.complete && imageElement.naturalHeight > 0) {
+					imageElement.onload();
+				}
+			}
+
+			function clearGameBoard() {
+				puzzleContainer.innerHTML = '';
+				message.textContent = '';
+				puzzleContainer.classList.remove('solved');
+			}
+
+			function setupPuzzle() {
+				puzzleContainer.innerHTML = '';
+				puzzleContainer.style.gridTemplateColumns = `repeat(${difficulty.cols}, 1fr)`;
+				puzzleContainer.style.gridTemplateRows = `repeat(${difficulty.rows}, 1fr)`;
+
+				const aspectRatio = imageElement.naturalWidth / imageElement.naturalHeight;
+				puzzleContainer.style.width = 'clamp(300px, 60vw, 700px)';
+				puzzleContainer.style.aspectRatio = aspectRatio;
+
+				const pieces = createPieces();
+
+				// Shuffle the pieces until they are not in the solved state
+				do {
+					pieces.sort(() => Math.random() - 0.5);
+				} while (isSolved(pieces));
+
+				pieces.forEach(piece => puzzleContainer.appendChild(piece));
+			}
+
+			function createPieces() {
+				const pieceArray = [];
+				const totalPieces = difficulty.rows * difficulty.cols;
+				// Use offsetWidth for more reliable dimensions including borders/padding
+				const puzzleClientWidth = puzzleContainer.offsetWidth;
+				const puzzleClientHeight = puzzleContainer.offsetHeight;
+				const pieceDivWidth = puzzleClientWidth / difficulty.cols;
+				const pieceDivHeight = puzzleClientHeight / difficulty.rows;
+
+				for (let i = 0; i < totalPieces; i++) {
+					const piece = document.createElement('div');
+					piece.dataset.correctIndex = i;
+					piece.classList.add('puzzle-piece');
+					piece.draggable = true;
+
+					const col = i % difficulty.cols;
+					const row = Math.floor(i / difficulty.cols);
+
+					piece.style.width = `${pieceDivWidth}px`;
+					piece.style.height = `${pieceDivHeight}px`;
+					piece.style.backgroundImage = `url(${imageSrc})`;
+					piece.style.backgroundSize = `${puzzleClientWidth}px ${puzzleClientHeight}px`;
+					piece.style.backgroundPosition = `-${col * pieceDivWidth}px -${row * pieceDivHeight}px`;
+
+					piece.addEventListener('dragstart', handleDragStart);
+					piece.addEventListener('dragover', e => e.preventDefault());
+					piece.addEventListener('drop', handleDrop);
+					piece.addEventListener('dragend', handleDragEnd);
+
+					pieceArray.push(piece);
+				}
+				return pieceArray;
+			}
+
+			// --- DRAG AND DROP HANDLERS ---
+			function handleDragStart(e) {
+				draggedPiece = e.target;
+				setTimeout(() => e.target.classList.add('dragging'), 0);
+			}
+
+			function handleDrop(e) {
+				e.preventDefault();
+				const dropTarget = e.target;
+				if (draggedPiece !== dropTarget && dropTarget.classList.contains('puzzle-piece')) {
+					swapNodes(draggedPiece, dropTarget);
+					checkCompletion();
+				}
+			}
+
+			function handleDragEnd(e) {
+				e.target.classList.remove('dragging');
+			}
+
+			function swapNodes(node1, node2) {
+				const placeholder = document.createElement('div');
+				node1.parentNode.replaceChild(placeholder, node1);
+				node2.parentNode.replaceChild(node1, node2);
+				placeholder.parentNode.replaceChild(node2, placeholder);
+			}
+
+			function isSolved(pieces) {
+				if (pieces.length === 0) return false;
+				for (let i = 0; i < pieces.length; i++) {
+					if (parseInt(pieces[i].dataset.correctIndex) !== i) {
+						return false;
+					}
+				}
+				return true;
+			}
+
+			function checkCompletion() {
+				if (isSolved(puzzleContainer.childNodes)) {
+					message.textContent = 'Congratulations! You solved the puzzle! 🎉';
+					puzzleContainer.classList.add('solved');
+					document.querySelectorAll('.puzzle-piece').forEach(p => {
+						p.draggable = false;
+						p.style.cursor = 'default';
+					});
+				}
+			}
+
+			function handleResize() {
+				const currentPieces = document.querySelectorAll('.puzzle-piece');
+				if (currentPieces.length === 0) return;
+
+				const puzzleClientWidth = puzzleContainer.offsetWidth;
+				const puzzleClientHeight = puzzleContainer.offsetHeight;
+				const pieceDivWidth = puzzleClientWidth / difficulty.cols;
+				const pieceDivHeight = puzzleClientHeight / difficulty.rows;
+
+				currentPieces.forEach(piece => {
+					piece.style.width = `${pieceDivWidth}px`;
+					piece.style.height = `${pieceDivHeight}px`;
+					piece.style.backgroundSize = `${puzzleClientWidth}px ${puzzleClientHeight}px`;
+
+					const correctIndex = parseInt(piece.dataset.correctIndex);
+					const col = correctIndex % difficulty.cols;
+					const row = Math.floor(correctIndex / difficulty.cols);
+
+					piece.style.backgroundPosition = `-${col * pieceDivWidth}px -${row * pieceDivHeight}px`;
+				});
+			}
+		});
+	</script>
+			<!-- Q6: Event Tracker  -->
+	<script>
+		(function () {
+			'use strict';
+
+			// Helper: get timestamp
+			function getTimestamp() {
+				return new Date().toISOString().replace('T', ' ').substring(0, 19);
+			}
+
+			// Helper: detect element type
+			function getElementType(el) {
+				if (!el) return 'unknown';
+				const tag = el.tagName.toLowerCase();
+
+				if (tag === 'button') return 'button';
+				if (tag === 'a') return 'link';
+				if (tag === 'img') return 'image';
+				if (tag === 'select' || tag === 'option') return 'dropdown';
+				if (tag === 'input' && el.type === 'text') return 'text_input';
+				if (tag === 'input') return el.type + '_input';
+				if (tag === 'p' || tag === 'span' || tag === 'div') return 'text';
+				return tag;
+			}
+
+			// Log page view on load
+			window.addEventListener('load', function () {
+				console.log({
+					timestamp: getTimestamp(),
+					type_of_event: 'page_view',
+					event_object: 'page',
+					page_url: window.location.href
+				});
+			});
+
+			// Log clicks
+			document.addEventListener('click', function (e) {
+				const el = e.target;
+				console.log({
+					timestamp: getTimestamp(),
+					type_of_event: 'click',
+					event_object: getElementType(el),
+					element_text: (el.innerText || '').trim().substring(0, 30) // short label if any
+				});
+			});
+		})();
+	</script>
+
+</body>
+
+</html>
