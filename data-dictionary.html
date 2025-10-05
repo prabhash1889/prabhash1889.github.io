@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Data Dictionary Generator</title>
+
+	<!-- Tailwind CSS for styling -->
+	<script src="https://cdn.tailwindcss.com"></script>
+
+	<!-- Google Fonts: Inter -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+	<!-- jsPDF and html2canvas for PDF export -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+	<style>
+		body {
+			font-family: 'Inter', sans-serif;
+		}
+
+		code {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+		}
+
+		/* Ensure mermaid diagram is responsive */
+		.mermaid svg {
+			max-width: 100%;
+			height: auto;
+		}
+
+		/* Style for printing/PDF export */
+		@media print {
+			body * {
+				visibility: hidden;
+			}
+
+			#output,
+			#output * {
+				visibility: visible;
+			}
+
+			#output {
+				position: absolute;
+				left: 0;
+				top: 0;
+				width: 100%;
+			}
+
+			.no-print {
+				display: none;
+			}
+		}
+	</style>
+</head>
+
+<body class="bg-slate-100 text-slate-800">
+
+	<div class="container mx-auto p-4 md:p-8">
+
+		<!-- Header -->
+		<header class="text-center mb-12 p-8 rounded-xl bg-slate-800 text-white shadow-lg">
+			<h1 class="text-4xl font-bold">Data Dictionary & Schema Visualizer</h1>
+			<p class="text-lg text-slate-300 mt-2">Paste your database schema in JSON or XML format to generate a
+				glossary and a relationship diagram.</p>
+		</header>
+
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+			<!-- Left Column: Input and Controls -->
+			<div class="bg-white p-8 rounded-xl shadow-lg">
+				<h2 class="text-2xl font-semibold mb-4 text-slate-800">1. Input Schema</h2>
+
+				<!-- Input Textarea -->
+				<div>
+					<label for="schemaInput" class="block text-sm font-medium text-slate-700">Schema Input (JSON or
+						XML)</label>
+					<textarea id="schemaInput" rows="15"
+						class="mt-1 block w-full p-3 border border-slate-300 rounded-md shadow-sm focus:ring-slate-500 focus:border-slate-500 sm:text-sm"
+						placeholder="Paste your schema here, or upload a file..."></textarea>
+				</div>
+
+				<!-- Action Buttons -->
+				<div class="mt-6 flex flex-wrap gap-4">
+					<button id="generateBtn"
+						class="inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-slate-700 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition duration-200 transform hover:-translate-y-0.5">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20"
+							fill="currentColor">
+							<path fill-rule="evenodd"
+								d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0L7.86 6.81A2.5 2.5 0 015.65 9.02l-3.64.65c-1.56.28-1.56 2.4 0 2.68l3.64.65a2.5 2.5 0 012.21 2.21l.65 3.64c.28 1.56 2.4 1.56 2.68 0l.65-3.64a2.5 2.5 0 012.21-2.21l3.64-.65c-1.56-.28-1.56-2.4 0-2.68l-3.64-.65a2.5 2.5 0 01-2.21-2.21L11.49 3.17zM15.5 15.5a1 1 0 100-2 1 1 0 000 2zM5.5 5.5a1 1 0 100-2 1 1 0 000 2z"
+								clip-rule="evenodd" />
+						</svg>
+						Generate Dictionary
+					</button>
+					<label for="fileInput"
+						class="inline-flex items-center justify-center px-5 py-2.5 border border-slate-300 text-sm font-medium rounded-lg shadow-sm text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition duration-200 transform hover:-translate-y-0.5 cursor-pointer">
+						<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20"
+							fill="currentColor">
+							<path fill-rule="evenodd"
+								d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z"
+								clip-rule="evenodd" />
+						</svg>
+						Upload File
+					</label>
+					<input type="file" id="fileInput" class="hidden" accept=".json,.xml">
+					<button id="sampleJsonBtn"
+						class="inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-slate-500 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 transition duration-200 transform hover:-translate-y-0.5">Load
+						Sample JSON</button>
+					<button id="sampleXmlBtn"
+						class="inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-slate-500 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 transition duration-200 transform hover:-translate-y-0.5">Load
+						Sample XML</button>
+				</div>
+
+				<!-- Instructions Section -->
+				<div class="mt-8">
+					<details class="bg-slate-100 p-4 rounded-lg">
+						<summary class="font-semibold cursor-pointer text-lg">How to Format Your Input</summary>
+						<div class="mt-4 space-y-4 text-slate-700">
+							<div>
+								<h4 class="font-semibold text-md">Supported Formats</h4>
+								<p>You can provide your schema in either JSON or XML. Below are examples and
+									instructions for generating the required structure.</p>
+							</div>
+
+							<div>
+								<h4 class="font-semibold text-md">XML Format Example</h4>
+								<pre
+									class="bg-slate-800 text-white p-4 rounded-lg overflow-x-auto text-sm shadow-inner"><code>&lt;schema&gt;
+  &lt;tables&gt;
+    &lt;table name="users"&gt;
+      &lt;column name="id" type="integer" is_primary_key="true"&gt;Unique user ID.&lt;/column&gt;
+      &lt;column name="username" type="varchar(50)"&gt;User's name.&lt;/column&gt;
+    &lt;/table&gt;
+  &lt;/tables&gt;
+  &lt;relationships&gt;
+    &lt;relationship from_table="posts" from_column="user_id" to_table="users" to_column="id" /&gt;
+  &lt;/relationships&gt;
+&lt;/schema&gt;</code></pre>
+							</div>
+
+							<div>
+								<h4 class="font-semibold text-md">Generating Input from Your Database</h4>
+								<p>Here are some sample scripts to help you extract schema information in the required
+									JSON format, which is often easier to generate directly from a database.</p>
+								<h5 class="font-semibold text-md mt-2">PostgreSQL (psql)</h5>
+								<p class="text-sm mb-2">This query outputs a single JSON string you can copy directly.
+								</p>
+								<pre
+									class="bg-slate-800 text-white p-4 rounded-lg overflow-x-auto text-sm shadow-inner"><code class="language-sql">
+-- Paste this directly into psql
+SELECT json_build_object(
+    'tables', (SELECT json_agg(t) FROM (SELECT c.table_name as name, json_agg(json_build_object('name', c.column_name, 'type', c.data_type, 'is_primary_key', (EXISTS (SELECT 1 FROM information_schema.key_column_usage kcu JOIN information_schema.table_constraints tc ON kcu.constraint_name = tc.constraint_name WHERE tc.constraint_type = 'PRIMARY KEY' AND kcu.table_name=c.table_name AND kcu.column_name=c.column_name)), 'description', col_description(c.table_schema||'.'||c.table_name, c.ordinal_position))) as columns FROM information_schema.columns c WHERE c.table_schema = 'public' GROUP BY c.table_name) as t),
+    'relationships', (SELECT json_agg(r) FROM (SELECT kcu1.table_name as from_table, kcu1.column_name as from_column, kcu2.table_name as to_table, kcu2.column_name as to_column FROM information_schema.referential_constraints rc JOIN information_schema.key_column_usage kcu1 ON rc.constraint_name = kcu1.constraint_name JOIN information_schema.key_column_usage kcu2 ON rc.unique_constraint_name = kcu2.constraint_name) as r)
+);
+                                </code></pre>
+							</div>
+						</div>
+					</details>
+				</div>
+			</div>
+
+			<!-- Right Column: Output -->
+			<div id="outputContainer" class="bg-white p-8 rounded-xl shadow-lg hidden">
+				<!-- Output Header & Export Buttons -->
+				<div class="flex justify-between items-center mb-6 no-print">
+					<h2 class="text-2xl font-semibold text-slate-800">2. Generated Dictionary</h2>
+					<div class="flex gap-4">
+						<button id="exportHtmlBtn"
+							class="inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-slate-500 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 transition duration-200 transform hover:-translate-y-0.5">Export
+							HTML</button>
+						<button id="exportPdfBtn"
+							class="inline-flex items-center justify-center px-5 py-2.5 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-teal-500 hover:bg-teal-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-400 transition duration-200 transform hover:-translate-y-0.5">Export
+							PDF</button>
+					</div>
+				</div>
+
+				<!-- This is the content that will be exported -->
+				<div id="output">
+					<!-- Placeholder for the glossary -->
+					<div id="glossary"></div>
+
+					<!-- Placeholder for the diagram -->
+					<div class="mt-8 pt-8 border-t border-slate-200">
+						<h3 class="text-xl font-semibold mb-4 text-slate-800">Table Relationship Diagram</h3>
+						<div id="diagram" class="mermaid w-full p-4 bg-slate-50 rounded-lg overflow-x-auto">
+							<!-- Mermaid will render the diagram here -->
+						</div>
+					</div>
+				</div>
+			</div>
+
+		</div>
+
+		<!-- General Messages/Errors -->
+		<div id="message" class="mt-6 text-center text-green-600 font-medium"></div>
+
+	</div>
+
+	<!-- Mermaid.js for diagram rendering -->
+	<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+	<script>
+		// Initialize Mermaid
+		mermaid.initialize({
+			startOnLoad: false,
+			theme: 'base',
+			themeVariables: {
+				'primaryColor': '#f8fafc',
+				'primaryTextColor': '#1e293b',
+				'primaryBorderColor': '#e2e8f0',
+				'lineColor': '#64748b',
+				'textColor': '#334155',
+				'mainBkg': '#f1f5f9'
+			}
+		});
+
+		// DOM Elements
+		const schemaInput = document.getElementById('schemaInput');
+		const generateBtn = document.getElementById('generateBtn');
+		const sampleJsonBtn = document.getElementById('sampleJsonBtn');
+		const sampleXmlBtn = document.getElementById('sampleXmlBtn');
+		const fileInput = document.getElementById('fileInput');
+		const exportHtmlBtn = document.getElementById('exportHtmlBtn');
+		const exportPdfBtn = document.getElementById('exportPdfBtn');
+		const outputContainer = document.getElementById('outputContainer');
+		const glossaryDiv = document.getElementById('glossary');
+		const diagramDiv = document.getElementById('diagram');
+		const messageDiv = document.getElementById('message');
+
+		// Sample JSON data
+		const sampleJsonData = {
+			"tables": [
+				{ "name": "users", "columns": [{ "name": "id", "type": "integer", "is_primary_key": true, "description": "Unique identifier for the user." }, { "name": "username", "type": "varchar(50)", "is_primary_key": false, "description": "User's chosen username." }, { "name": "email", "type": "varchar(100)", "is_primary_key": false, "description": "User's email address." }] },
+				{ "name": "posts", "columns": [{ "name": "id", "type": "integer", "is_primary_key": true, "description": "Unique identifier for the post." }, { "name": "user_id", "type": "integer", "is_primary_key": false, "description": "FK to users table." }, { "name": "title", "type": "varchar(255)", "is_primary_key": false, "description": "Title of the blog post." }] },
+				{ "name": "comments", "columns": [{ "name": "id", "type": "integer", "is_primary_key": true, "description": "Unique identifier for the comment." }, { "name": "post_id", "type": "integer", "is_primary_key": false, "description": "FK to posts table." }, { "name": "user_id", "type": "integer", "is_primary_key": false, "description": "FK to users table (author)." }] }
+			],
+			"relationships": [
+				{ "from_table": "posts", "from_column": "user_id", "to_table": "users", "to_column": "id" },
+				{ "from_table": "comments", "from_column": "post_id", "to_table": "posts", "to_column": "id" },
+				{ "from_table": "comments", "from_column": "user_id", "to_table": "users", "to_column": "id" }
+			]
+		};
+
+		// Sample XML data
+		const sampleXmlData = `
+<schema>
+  <tables>
+    <table name="users">
+      <column name="id" type="integer" is_primary_key="true">Unique identifier for the user.</column>
+      <column name="username" type="varchar(50)" is_primary_key="false">User's chosen username.</column>
+      <column name="email" type="varchar(100)" is_primary_key="false">User's email address.</column>
+    </table>
+    <table name="posts">
+      <column name="id" type="integer" is_primary_key="true">Unique identifier for the post.</column>
+      <column name="user_id" type="integer" is_primary_key="false">FK to users table.</column>
+      <column name="title" type="varchar(255)" is_primary_key="false">Title of the blog post.</column>
+    </table>
+    <table name="comments">
+      <column name="id" type="integer" is_primary_key="true">Unique identifier for the comment.</column>
+      <column name="post_id" type="integer" is_primary_key="false">FK to posts table.</column>
+      <column name="user_id" type="integer" is_primary_key="false">FK to users table (author).</column>
+    </table>
+  </tables>
+  <relationships>
+    <relationship from_table="posts" from_column="user_id" to_table="users" to_column="id" />
+    <relationship from_table="comments" from_column="post_id" to_table="posts" to_column="id" />
+    <relationship from_table="comments" from_column="user_id" to_table="users" to_column="id" />
+  </relationships>
+</schema>
+        `.trim();
+
+		// --- Event Listeners ---
+
+		sampleJsonBtn.addEventListener('click', () => {
+			schemaInput.value = JSON.stringify(sampleJsonData, null, 2);
+			messageDiv.textContent = '';
+		});
+
+		sampleXmlBtn.addEventListener('click', () => {
+			schemaInput.value = sampleXmlData;
+			messageDiv.textContent = '';
+		});
+
+		fileInput.addEventListener('change', (event) => {
+			const file = event.target.files[0];
+			if (!file) {
+				return;
+			}
+
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				schemaInput.value = e.target.result;
+				showMessage(`File "${file.name}" loaded. Click 'Generate' to proceed.`, 'success');
+			};
+			reader.onerror = (e) => {
+				showMessage('Error reading file.', 'error');
+				console.error('File reading error:', e);
+			};
+			reader.readAsText(file);
+		});
+
+		generateBtn.addEventListener('click', () => {
+			const inputText = schemaInput.value.trim();
+			if (!inputText) {
+				showMessage('Please paste your schema or load a file first.', 'error');
+				return;
+			}
+
+			let schema;
+			try {
+				if (inputText.startsWith('<')) {
+					schema = convertXmlToSchema(inputText);
+				} else {
+					schema = JSON.parse(inputText);
+				}
+
+				if (!schema || !schema.tables || !Array.isArray(schema.tables)) {
+					throw new Error("Invalid schema structure. A 'tables' array is required.");
+				}
+
+				generateGlossary(schema.tables);
+				generateDiagram(schema.tables, schema.relationships || []);
+				outputContainer.classList.remove('hidden');
+				messageDiv.textContent = '';
+			} catch (error) {
+				showMessage(`Error parsing input: ${error.message}`, 'error');
+				outputContainer.classList.add('hidden');
+			}
+		});
+
+		// --- Core Functions ---
+
+		function showMessage(msg, type = 'error') {
+			messageDiv.textContent = msg;
+			if (type === 'error') {
+				messageDiv.className = 'mt-6 text-center text-red-600 font-medium';
+			} else {
+				messageDiv.className = 'mt-6 text-center text-green-600 font-medium';
+			}
+		}
+
+		function convertXmlToSchema(xmlString) {
+			const parser = new DOMParser();
+			const xmlDoc = parser.parseFromString(xmlString, "application/xml");
+
+			if (xmlDoc.getElementsByTagName("parsererror").length) {
+				throw new Error("Invalid XML format.");
+			}
+
+			const schema = { tables: [], relationships: [] };
+
+			// Parse tables
+			const tableNodes = xmlDoc.getElementsByTagName("table");
+			for (const tableNode of tableNodes) {
+				const table = {
+					name: tableNode.getAttribute("name"),
+					columns: []
+				};
+				const columnNodes = tableNode.getElementsByTagName("column");
+				for (const colNode of columnNodes) {
+					table.columns.push({
+						name: colNode.getAttribute("name"),
+						type: colNode.getAttribute("type"),
+						is_primary_key: colNode.getAttribute("is_primary_key") === "true",
+						description: colNode.textContent
+					});
+				}
+				schema.tables.push(table);
+			}
+
+			// Parse relationships
+			const relNodes = xmlDoc.getElementsByTagName("relationship");
+			for (const relNode of relNodes) {
+				schema.relationships.push({
+					from_table: relNode.getAttribute("from_table"),
+					from_column: relNode.getAttribute("from_column"),
+					to_table: relNode.getAttribute("to_table"),
+					to_column: relNode.getAttribute("to_column"),
+				});
+			}
+			return schema;
+		}
+
+
+		function generateGlossary(tables) {
+			let html = '<h3 class="text-xl font-semibold mb-4 text-slate-800">Tables Glossary</h3>';
+			html += '<div class="space-y-8">';
+
+			tables.forEach(table => {
+				html += `
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                        <div class="p-4 bg-slate-50 border-b border-slate-200">
+                           <h4 class="text-lg font-bold text-slate-700">${table.name}</h4>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full">
+                                <thead class="bg-slate-100">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Column</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Type</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="bg-white divide-y divide-slate-200">
+                                    ${table.columns.map(col => `
+                                        <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                                                ${col.name} ${col.is_primary_key ? '<span class="ml-2 text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">PK</span>' : ''}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 font-mono">${col.type}</td>
+                                            <td class="px-6 py-4 text-sm text-slate-700">${col.description || ''}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+			});
+
+			html += '</div>';
+			glossaryDiv.innerHTML = html;
+		}
+
+		async function generateDiagram(tables, relationships) {
+			let mermaidSyntax = 'erDiagram\n';
+
+			tables.forEach(table => {
+				mermaidSyntax += `    ${table.name} {\n`;
+				table.columns.forEach(col => {
+					const pk = col.is_primary_key ? 'PK' : '';
+					const comment = col.description ? `"${col.description.replace(/"/g, '&quot;')}"` : '';
+					mermaidSyntax += `        ${col.type.replace(/\s/g, '_')} ${col.name} ${pk} ${comment}\n`;
+				});
+				mermaidSyntax += '    }\n';
+			});
+
+			relationships.forEach(rel => {
+				mermaidSyntax += `    ${rel.from_table} }|--|| ${rel.to_table} : "${rel.from_column}"\n`;
+			});
+
+			diagramDiv.innerHTML = '';
+			try {
+				const { svg } = await mermaid.render('mermaid-graph', mermaidSyntax);
+				diagramDiv.innerHTML = svg;
+			} catch (error) {
+				console.error("Mermaid rendering error:", error);
+				diagramDiv.textContent = "Error rendering diagram. Check console for details.";
+				showMessage("Error rendering diagram. Check the browser console for details.", 'error');
+			}
+		}
+
+		exportHtmlBtn.addEventListener('click', () => {
+			const outputContent = document.getElementById('output').innerHTML;
+			const title = "Data Dictionary";
+			const htmlContent = `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>${title}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;margin:40px;color:#333}h1,h2,h3{color:#111}table{width:100%;border-collapse:collapse;margin-bottom:2rem}th,td{border:1px solid #ddd;padding:8px;text-align:left}th{background-color:#f2f2f2}.mermaid svg{max-width:100%;height:auto}</style></head><body><h1>${title}</h1>${outputContent}</body></html>`;
+			const blob = new Blob([htmlContent], { type: 'text/html' });
+			const link = document.createElement('a');
+			link.href = URL.createObjectURL(blob);
+			link.download = 'data-dictionary.html';
+			link.click();
+		});
+
+		exportPdfBtn.addEventListener('click', async () => {
+			const { jsPDF } = window.jspdf;
+			const content = document.getElementById('output');
+			const button = exportPdfBtn;
+			button.textContent = 'Generating...';
+			button.disabled = true;
+			try {
+				const canvas = await html2canvas(content, { scale: 2 });
+				const imgData = canvas.toDataURL('image/png');
+				const pdf = new jsPDF({ orientation: 'p', unit: 'px', format: [canvas.width, canvas.height] });
+				pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+				pdf.save('data-dictionary.pdf');
+			} catch (error) {
+				console.error("Error generating PDF:", error);
+				showMessage("Failed to generate PDF. Check console for details.", 'error');
+			} finally {
+				button.textContent = 'Export PDF';
+				button.disabled = false;
+			}
+		});
+	</script>
+			<!-- Q6: Event Tracker  -->
+	<script>
+		(function () {
+			'use strict';
+
+			// Helper: get timestamp
+			function getTimestamp() {
+				return new Date().toISOString().replace('T', ' ').substring(0, 19);
+			}
+
+			// Helper: detect element type
+			function getElementType(el) {
+				if (!el) return 'unknown';
+				const tag = el.tagName.toLowerCase();
+
+				if (tag === 'button') return 'button';
+				if (tag === 'a') return 'link';
+				if (tag === 'img') return 'image';
+				if (tag === 'select' || tag === 'option') return 'dropdown';
+				if (tag === 'input' && el.type === 'text') return 'text_input';
+				if (tag === 'input') return el.type + '_input';
+				if (tag === 'p' || tag === 'span' || tag === 'div') return 'text';
+				return tag;
+			}
+
+			// Log page view on load
+			window.addEventListener('load', function () {
+				console.log({
+					timestamp: getTimestamp(),
+					type_of_event: 'page_view',
+					event_object: 'page',
+					page_url: window.location.href
+				});
+			});
+
+			// Log clicks
+			document.addEventListener('click', function (e) {
+				const el = e.target;
+				console.log({
+					timestamp: getTimestamp(),
+					type_of_event: 'click',
+					event_object: getElementType(el),
+					element_text: (el.innerText || '').trim().substring(0, 30) // short label if any
+				});
+			});
+		})();
+	</script>
+
+</body>
+
+</html>
